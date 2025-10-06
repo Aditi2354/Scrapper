@@ -1,6 +1,7 @@
 import pLimit from 'p-limit';
 import { topKeywords, similarity } from './utils/text.js';
 import { searchCapable } from './adapters/index.js';
+import { getAmazonRecommendations } from './adapters/amazon/recs.js';
 
 const CONCURRENCY = Number(process.env.CONCURRENCY || 3);
 
@@ -37,6 +38,14 @@ export async function buildRecommendations(context, seed, { limit = 24, pages = 
     if (dedup.length >= limit) break;
   }
   return dedup;
+}
+
+export async function getRecommendations(site, { url, limit = 15 }, browser) {
+  if (site === 'amazon') {
+    return await getAmazonRecommendations(browser, { url, limit });
+  }
+  
+  throw new Error(`Unsupported site: ${site}`);
 }
 
 function stripScore(it){ const { _score, ...rest } = it; return rest; }
