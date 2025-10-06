@@ -1,9 +1,11 @@
 import pLimit from 'p-limit';
 import { topKeywords, similarity } from './utils/text.js';
 import { searchCapable } from './adapters/index.js';
+import { getAmazonRecommendations } from './adapters/amazon/recs.js';
 
 const CONCURRENCY = Number(process.env.CONCURRENCY || 3);
 
+// Existing multi-adapter recommender kept for backward compatibility
 export async function buildRecommendations(context, seed, { limit = 24, pages = 2 } = {}) {
   const kw = topKeywords(seed.product_name || seed.product_title || '');
   const lim = pLimit(CONCURRENCY);
@@ -40,3 +42,13 @@ export async function buildRecommendations(context, seed, { limit = 24, pages = 
 }
 
 function stripScore(it){ const { _score, ...rest } = it; return rest; }
+
+// New site-specific dispatcher (Amazon only for now)
+export async function getRecommendations(site, { url, limit } = {}){
+  if (!site || !url) throw new Error('site and url required');
+  const normalizedSite = String(site).toLowerCase();
+  if (normalizedSite === 'amazon'){
+    return await getAmazonRecommendations(url, { limit });
+  }
+  throw new Error('unsupported site');
+}
