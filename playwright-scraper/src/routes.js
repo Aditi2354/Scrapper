@@ -1,7 +1,7 @@
 import express from 'express';
 import { launch } from './utils/browser.js';
 import { pickAdapter } from './adapters/index.js';
-import { buildRecommendations } from './recommender.js';
+import { buildRecommendations, getRecommendations } from './recommender.js';
 
 export const router = express.Router();
 router.use(express.json({ limit: '1mb' }));
@@ -41,6 +41,31 @@ router.post('/reco/from-url', async (req, res) => {
     res.json({ seed, items });
   } catch (e) {
     res.status(500).json({ error: e.message });
+  } finally {
+    await context.close();
+  }
+});
+
+router.post('/recs/:site', async (req, res) => {
+  const { site } = req.params;
+  const { url, limit = 15 } = req.body || {};
+  
+  if (!url) return res.status(400).json({ error: 'url required' });
+  if (site !== 'amazon') return res.status(400).json({ error: 'only amazon supported' });
+  
+  const { context } = await launch();
+  try {
+    const page = await context.newPage();
+    const result = await getRecommendations(site, page, { url, limit });
+    
+    if (result.error) {
+      return res.status(500).json(result);
+    }
+    
+    res.json(result);
+  } catch (e) {
+    console.error('[Route Error]', e);
+    res.status(500).json({ error: 'Internal server error', detail: e.message });
   } finally {
     await context.close();
   }
