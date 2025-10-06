@@ -1,7 +1,7 @@
 import express from 'express';
 import { launch } from './utils/browser.js';
 import { pickAdapter } from './adapters/index.js';
-import { buildRecommendations } from './recommender.js';
+import { buildRecommendations, getRecommendations } from './recommender.js';
 
 export const router = express.Router();
 router.use(express.json({ limit: '1mb' }));
@@ -43,5 +43,23 @@ router.post('/reco/from-url', async (req, res) => {
     res.status(500).json({ error: e.message });
   } finally {
     await context.close();
+  }
+});
+
+router.post('/recs/:site', async (req, res) => {
+  const { site } = req.params;
+  const { url, limit = 15 } = req.body || {};
+  
+  if (!url) return res.status(400).json({ error: 'url required' });
+  if (site !== 'amazon') return res.status(400).json({ error: 'unsupported site' });
+
+  const { browser } = await launch();
+  try {
+    const result = await getRecommendations(site, { url, limit }, browser);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message, detail: e.stack });
+  } finally {
+    await browser.close();
   }
 });
