@@ -1,8 +1,10 @@
 import pLimit from 'p-limit';
 import { topKeywords, similarity } from './utils/text.js';
 import { searchCapable } from './adapters/index.js';
+import { AmazonRecommendations } from './adapters/amazon/recs.js';
 
 const CONCURRENCY = Number(process.env.CONCURRENCY || 3);
+const amazonRecs = new AmazonRecommendations();
 
 export async function buildRecommendations(context, seed, { limit = 24, pages = 2 } = {}) {
   const kw = topKeywords(seed.product_name || seed.product_title || '');
@@ -40,3 +42,34 @@ export async function buildRecommendations(context, seed, { limit = 24, pages = 
 }
 
 function stripScore(it){ const { _score, ...rest } = it; return rest; }
+
+/**
+ * Get recommendations for a specific site using the new recommendations system
+ * @param {string} site - Site name (e.g., 'amazon')
+ * @param {Object} options - Options { url, limit }
+ * @returns {Promise<Object>} Recommendations object or error
+ */
+export async function getRecommendations(site, { url, limit = 50 } = {}) {
+  try {
+    if (site === 'amazon') {
+      return await amazonRecs.getRecommendations(url, limit);
+    } else {
+      throw new Error(`Unsupported site: ${site}`);
+    }
+  } catch (error) {
+    console.error(`Recommendations error for ${site}:`, error);
+    return {
+      error: 'Failed to get recommendations',
+      detail: error.message,
+      site,
+      inputUrl: url
+    };
+  } finally {
+    // Cleanup browser resources
+    try {
+      await amazonRecs.close();
+    } catch (e) {
+      // Ignore cleanup errors
+    }
+  }
+}
