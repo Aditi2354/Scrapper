@@ -2,6 +2,7 @@ import express from 'express';
 import { launch } from './utils/browser.js';
 import { pickAdapter } from './adapters/index.js';
 import { buildRecommendations } from './recommender.js';
+import { getRecommendations } from './recommender-new.js';
 
 export const router = express.Router();
 router.use(express.json({ limit: '1mb' }));
@@ -43,5 +44,34 @@ router.post('/reco/from-url', async (req, res) => {
     res.status(500).json({ error: e.message });
   } finally {
     await context.close();
+  }
+});
+
+// New Amazon recommendations endpoint
+router.post('/recs/:site', async (req, res) => {
+  const { site } = req.params;
+  const { url, limit } = req.body || {};
+  
+  if (!url) return res.status(400).json({ error: 'url required' });
+  
+  // Currently only support Amazon
+  if (site !== 'amazon') {
+    return res.status(400).json({ error: 'Only amazon recommendations are currently supported' });
+  }
+  
+  try {
+    const result = await getRecommendations(site, { url, limit });
+    
+    if (result.error) {
+      return res.status(400).json(result);
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error(`[Routes] Error in /recs/${site}:`, error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      detail: error.message 
+    });
   }
 });
