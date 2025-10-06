@@ -40,3 +40,13 @@ export async function buildRecommendations(context, seed, { limit = 24, pages = 
 }
 
 function stripScore(it){ const { _score, ...rest } = it; return rest; }
+
+// New recommendations dispatcher
+export async function getRecommendations(site, page, options) {
+  if (site === 'amazon') {
+    const { url, limit = 15 } = options;
+    return await getAmazonRecommendations(page, url, limit);
+  }
+  
+  throw new Error(`Unsupported site: ${site}`);
+}
