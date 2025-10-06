@@ -1,8 +1,20 @@
 import pLimit from 'p-limit';
 import { topKeywords, similarity } from './utils/text.js';
 import { searchCapable } from './adapters/index.js';
+import { getAmazonRecommendations } from './adapters/amazon/recs.js';
 
 const CONCURRENCY = Number(process.env.CONCURRENCY || 3);
+
+/**
+ * Get recommendations for a specific site
+ */
+export async function getRecommendations(site, { url, limit = 15 }, browser) {
+  if (site === 'amazon') {
+    return await getAmazonRecommendations(browser, { url, limit });
+  }
+  
+  throw new Error(`Unsupported site: ${site}`);
+}
 
 export async function buildRecommendations(context, seed, { limit = 24, pages = 2 } = {}) {
   const kw = topKeywords(seed.product_name || seed.product_title || '');
