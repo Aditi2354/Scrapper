@@ -1,6 +1,7 @@
 import pLimit from 'p-limit';
 import { topKeywords, similarity } from './utils/text.js';
 import { searchCapable } from './adapters/index.js';
+import { getAmazonRecommendations } from './adapters/amazon/recs.js';
 
 const CONCURRENCY = Number(process.env.CONCURRENCY || 3);
 
@@ -40,3 +41,13 @@ export async function buildRecommendations(context, seed, { limit = 24, pages = 
 }
 
 function stripScore(it){ const { _score, ...rest } = it; return rest; }
+
+// New dispatcher for explicit recommendations API (amazon-only for now)
+export async function getRecommendations(site, { url, limit = 15 } = {}) {
+  if (!url) throw new Error('url required');
+  const normalizedSite = String(site || '').toLowerCase();
+  if (normalizedSite !== 'amazon') {
+    throw new Error('unsupported site');
+  }
+  return await getAmazonRecommendations({ url, limit });
+}
